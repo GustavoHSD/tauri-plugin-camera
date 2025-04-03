@@ -1,3 +1,4 @@
+// filepath: tauri-plugin-camera/src/lib.rs
 use tauri::{
   plugin::{Builder, TauriPlugin},
   Manager, Runtime,
@@ -35,7 +36,7 @@ impl<R: Runtime, T: Manager<R>> crate::CameraExt<R> for T {
 /// Initializes the plugin.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
   Builder::new("camera")
-    .invoke_handler(tauri::generate_handler![commands::ping])
+    .invoke_handler(tauri::generate_handler![commands::take_picture, commands::record_video])
     .setup(|app, api| {
       #[cfg(mobile)]
       let camera = mobile::init(app, api)?;

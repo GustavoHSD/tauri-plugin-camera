@@ -1,3 +1,4 @@
+// filepath: e:\Users\charles\Documents\Projects\Typescript\tauri-plugin-camera\src\mobile.rs
 use serde::de::DeserializeOwned;
 use tauri::{
   plugin::{PluginApi, PluginHandle},
@@ -6,18 +7,16 @@ use tauri::{
 
 use crate::models::*;
 
-#[cfg(target_os = "ios")]
-tauri::ios_plugin_binding!(init_plugin_camera);
+#[cfg(target_os = "android")]
+tauri::android_plugin_binding!(init_plugin_camera);
 
-// initializes the Kotlin or Swift plugin classes
+// initializes the Kotlin plugin classes
 pub fn init<R: Runtime, C: DeserializeOwned>(
   _app: &AppHandle<R>,
   api: PluginApi<R, C>,
 ) -> crate::Result<Camera<R>> {
   #[cfg(target_os = "android")]
-  let handle = api.register_android_plugin("app.tauri.camera", "ExamplePlugin")?;
-  #[cfg(target_os = "ios")]
-  let handle = api.register_ios_plugin(init_plugin_camera)?;
+  let handle = api.register_android_plugin("app.tauri.camera", "CameraPlugin")?;
   Ok(Camera(handle))
 }
 
@@ -25,10 +24,17 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
 pub struct Camera<R: Runtime>(PluginHandle<R>);
 
 impl<R: Runtime> Camera<R> {
-  pub fn ping(&self, payload: PingRequest) -> crate::Result<PingResponse> {
+  pub fn take_picture(&self, payload: TakePictureRequest) -> crate::Result<TakePictureResponse> {
     self
       .0
-      .run_mobile_plugin("ping", payload)
+      .run_mobile_plugin("take_picture", payload)
+      .map_err(Into::into)
+  }
+
+  pub fn record_video(&self, payload: RecordVideoRequest) -> crate::Result<RecordVideoResponse> {
+    self
+      .0
+      .run_mobile_plugin("record_video", payload)
       .map_err(Into::into)
   }
 }

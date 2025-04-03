@@ -1,21 +1,22 @@
-use serde::{ser::Serializer, Serialize};
+// filepath: e:\Users\charles\Documents\Projects\Typescript\tauri-plugin-camera\src\error.rs
+use thiserror::Error;
 
-pub type Result<T> = std::result::Result<T, Error>;
-
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-  #[error(transparent)]
-  Io(#[from] std::io::Error),
-  #[cfg(mobile)]
-  #[error(transparent)]
-  PluginInvoke(#[from] tauri::plugin::mobile::PluginInvokeError),
+#[derive(Error, Debug)]
+pub enum CameraError {
+    #[error("Camera not available")]
+    CameraNotAvailable,
+    
+    #[error("Failed to access the camera")]
+    AccessDenied,
+    
+    #[error("Failed to capture image")]
+    CaptureImageError,
+    
+    #[error("Failed to record video")]
+    RecordVideoError,
+    
+    #[error("Unknown error occurred: {0}")]
+    Unknown(String),
 }
 
-impl Serialize for Error {
-  fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-  where
-    S: Serializer,
-  {
-    serializer.serialize_str(self.to_string().as_ref())
-  }
-}
+pub type Result<T> = std::result::Result<T, CameraError>;
