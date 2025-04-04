@@ -1,4 +1,18 @@
 <script>
+  import { invoke } from '@tauri-apps/api/core';
+  
+  export async function takePicture() {
+    console.log("Taking picture...");
+    const response = await invoke('plugin:camera|take_picture');
+    console.log("Picture taken:", response);
+    return response;
+  }
+
+  export async function recordVideo() {
+    const response = await invoke('plugin:camera|record_video');
+    return response;
+  }
+
   let isCameraInitialized = false;
 
   async function initializeCamera() {
@@ -8,20 +22,6 @@
       isCameraInitialized = true;
     } catch (error) {
       console.error('Failed to initialize camera:', error);
-    }
-  }
-
-  async function takePicture() {
-    if (!isCameraInitialized) {
-      alert('Please initialize the camera first.');
-      return;
-    }
-
-    try {
-      // Call the plugin API to take a picture
-      console.log('Taking picture...');
-    } catch (error) {
-      console.error('Failed to take picture:', error);
     }
   }
 </script>

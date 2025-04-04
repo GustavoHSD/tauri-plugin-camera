@@ -6,6 +6,7 @@
   ],
   "permissions": [
     "core:default",
-    "camera:default"
+    "camera:default",
+    "camera:allow-take-picture"
   ]
 }

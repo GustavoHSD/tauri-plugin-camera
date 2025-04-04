@@ -2,22 +2,48 @@ package app.tauri.camera
 
 import android.app.Activity
 import android.content.Intent
-import android.net.Uri
+import android.webkit.WebView
+import androidx.activity.result.ActivityResult
+import app.tauri.annotation.ActivityCallback
+//import android.net.Uri
 import android.provider.MediaStore
 import app.tauri.annotation.Command
+import app.tauri.plugin.Invoke
 import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
-import app.tauri.plugin.Invoke
 
 @TauriPlugin
 class CameraPlugin(private val activity: Activity) : Plugin(activity) {
+    private lateinit var webView: WebView
     private val cameraHandler = CameraHandler(activity)
+
+    override fun load(webView: WebView) {
+        super.load(webView)
+        this.webView = webView
+    }
 
     @Command
     fun takePicture(invoke: Invoke) {
-        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-        invoke.resolve(cameraHandler.takePicture(intent))
+        val intent = Intent(activity, CameraActivity::class.java)
+        startActivityForResult(invoke, intent, "onPictureTaken")
+    }
+
+    @ActivityCallback
+    private fun onPictureTaken(invoke: Invoke, result: ActivityResult) {
+        if (result.resultCode == Activity.RESULT_OK) {
+            val imagePath = result.data?.getStringExtra("imagePath")
+            if (imagePath != null) {
+                val returnObj = JSObject()
+                returnObj.put("imagePath", imagePath)
+                invoke.resolve(returnObj)
+                //invoke.resolve(mapOf("imagePath" to imagePath))
+            } else {
+                invoke.reject("Failed to capture image")
+            }
+        } else {
+            invoke.reject("Camera operation canceled")
+        }
     }
 
     @Command
@@ -26,28 +52,3 @@ class CameraPlugin(private val activity: Activity) : Plugin(activity) {
         invoke.resolve(cameraHandler.recordVideo(intent))
     }
 }
-
-// class CameraHandler(private val activity: Activity) {
-//     fun takePicture(intent: Intent): JSObject {
-//         // Logic to handle taking a picture
-//         activity.startActivityForResult(intent, REQUEST_IMAGE_CAPTURE)
-//         // Return a JSObject with the file reference or status
-//         val result = JSObject()
-//         result.put("status", "Picture taken")
-//         return result
-//     }
-
-//     fun recordVideo(intent: Intent): JSObject {
-//         // Logic to handle recording a video
-//         activity.startActivityForResult(intent, REQUEST_VIDEO_CAPTURE)
-//         // Return a JSObject with the file reference or status
-//         val result = JSObject()
-//         result.put("status", "Video recorded")
-//         return result
-//     }
-
-//     companion object {
-//         const val REQUEST_IMAGE_CAPTURE = 1
-//         const val REQUEST_VIDEO_CAPTURE = 2
-//     }
-// }
