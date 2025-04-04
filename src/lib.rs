@@ -17,10 +17,15 @@ mod models;
 
 pub use error::{Error, Result};
 
+#[cfg(target_os = "android")]
+const PLUGIN_IDENTIFIER: &str = "app.tauri.camera";
+
 #[cfg(desktop)]
 use desktop::Camera;
 #[cfg(mobile)]
 use mobile::Camera;
+
+
 
 /// Extensions to [`tauri::App`], [`tauri::AppHandle`] and [`tauri::Window`] to access the camera APIs.
 pub trait CameraExt<R: Runtime> {
@@ -35,14 +40,13 @@ impl<R: Runtime, T: Manager<R>> crate::CameraExt<R> for T {
 
 /// Initializes the plugin.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
-  Builder::new("camera")
-    .invoke_handler(tauri::generate_handler![commands::take_picture, commands::record_video])
+  Builder::<R>::new("camera")
+    //.invoke_handler(tauri::generate_handler![commands::take_picture, commands::record_video])
     .setup(|app, api| {
-      #[cfg(mobile)]
-      let camera = mobile::init(app, api)?;
-      #[cfg(desktop)]
-      let camera = desktop::init(app, api)?;
-      app.manage(camera);
+      #[cfg(target_os = "android")]
+      let handle = api.register_android_plugin(PLUGIN_IDENTIFIER, "CameraPlugin")?;
+
+      app.manage(Camera::new(handle));
       Ok(())
     })
     .build()

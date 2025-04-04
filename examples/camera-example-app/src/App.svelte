@@ -6,6 +6,7 @@
 
   function handlePictureTaken(url) {
     pictureUrl = url;
+    alert('Picture taken! URL: ' + url);
   }
 </script>
 

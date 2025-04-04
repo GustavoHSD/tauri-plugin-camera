@@ -4,10 +4,17 @@
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-
-    <application
-        android:label="Camera Plugin"
-        android:icon="@mipmap/ic_launcher">
+    <application>
+        <activity
+        android:name=".CameraActivity"
+        android:label="CameraActivity"
+        android:theme="@style/AppTheme.Transparent"/>
+    </application>
+    
+    <!-- <application
+        android:label="CameraPlugin"
+        android:icon="@mipmap/ic_launcher"
+        android:theme="@style/AppTheme.Transparent">
         <activity
             android:name=".CameraActivity"
             android:exported="true">
@@ -16,5 +23,5 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-    </application>
+    </application> -->
 </manifest>

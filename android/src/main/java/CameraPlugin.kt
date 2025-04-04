@@ -27,27 +27,27 @@ class CameraPlugin(private val activity: Activity) : Plugin(activity) {
     }
 }
 
-class CameraHandler(private val activity: Activity) {
-    fun takePicture(intent: Intent): JSObject {
-        // Logic to handle taking a picture
-        activity.startActivityForResult(intent, REQUEST_IMAGE_CAPTURE)
-        // Return a JSObject with the file reference or status
-        val result = JSObject()
-        result.put("status", "Picture taken")
-        return result
-    }
+// class CameraHandler(private val activity: Activity) {
+//     fun takePicture(intent: Intent): JSObject {
+//         // Logic to handle taking a picture
+//         activity.startActivityForResult(intent, REQUEST_IMAGE_CAPTURE)
+//         // Return a JSObject with the file reference or status
+//         val result = JSObject()
+//         result.put("status", "Picture taken")
+//         return result
+//     }
 
-    fun recordVideo(intent: Intent): JSObject {
-        // Logic to handle recording a video
-        activity.startActivityForResult(intent, REQUEST_VIDEO_CAPTURE)
-        // Return a JSObject with the file reference or status
-        val result = JSObject()
-        result.put("status", "Video recorded")
-        return result
-    }
+//     fun recordVideo(intent: Intent): JSObject {
+//         // Logic to handle recording a video
+//         activity.startActivityForResult(intent, REQUEST_VIDEO_CAPTURE)
+//         // Return a JSObject with the file reference or status
+//         val result = JSObject()
+//         result.put("status", "Video recorded")
+//         return result
+//     }
 
-    companion object {
-        const val REQUEST_IMAGE_CAPTURE = 1
-        const val REQUEST_VIDEO_CAPTURE = 2
-    }
-}
+//     companion object {
+//         const val REQUEST_IMAGE_CAPTURE = 1
+//         const val REQUEST_VIDEO_CAPTURE = 2
+//     }
+// }
