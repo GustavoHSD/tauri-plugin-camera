@@ -4,15 +4,18 @@
 
   let pictureUrl = '';
 
-  function handlePictureTaken(url) {
+  export function handlePictureTaken(url) {
     pictureUrl = url;
-    alert('Picture taken! URL: ' + url);
+    window.alert('Picture taken! URL: ' + url);
+  }
+  export function handleVideoRecorded(url) {
+    window.alert('Video recorded! URL: ' + url);
   }
 </script>
 
 <main class="container">
   <h1>Camera Example App</h1>
-  <Camera on:pictureTaken={handlePictureTaken} />
+  <Camera on:pictureTaken={handlePictureTaken} on:videoRecorded={handleVideoRecorded} />
   {#if pictureUrl}
     <h2>Picture Taken:</h2>
     <img src={pictureUrl} alt="Captured Image" />
