@@ -7,16 +7,19 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "ng": "ng"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
+    "angular-cli": "^0.1.0",
+    "ng": "^0.0.0",
     "tauri-plugin-camera-api": "file:../../"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "@tauri-apps/cli": "^2.0.0",
     "svelte": "^5.0.0",
-    "vite": "^6.0.0",
-    "@tauri-apps/cli": "^2.0.0"
+    "vite": "^6.0.0"
   }
 }

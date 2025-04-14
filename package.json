@@ -21,7 +21,8 @@
     "build": "vite build",
     "serve": "vite preview",
     "prepublishOnly": "pnpm build",
-    "pretest": "pnpm build"
+    "pretest": "pnpm build",
+    "tauri": "ng"
   },
   "dependencies": {
     "svelte": "^3.0.0",
