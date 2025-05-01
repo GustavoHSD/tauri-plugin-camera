@@ -2,29 +2,37 @@ package app.tauri.camera
 
 import android.Manifest
 import android.app.Activity
-import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
-import android.util.Log
 import android.util.Size
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.MediaController
 import android.widget.Toast
 import android.widget.VideoView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
-import androidx.camera.core.*
-import androidx.camera.core.VideoCapture.OnVideoSavedCallback
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.video.*
+import androidx.camera.video.FileOutputOptions
+import androidx.camera.video.Quality
+import androidx.camera.video.QualitySelector
+import androidx.camera.video.Recorder
+import androidx.camera.video.Recording
 import androidx.camera.video.VideoCapture
+import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import java.io.File
@@ -36,7 +44,7 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var previewView: PreviewView
     private lateinit var btnTakePicture: ImageButton
     private lateinit var btnSwitchCamera: ImageButton
-    private lateinit var btnFlash: ImageButton
+    private lateinit var btnLeaveCam: ImageButton
     private lateinit var btnRecordVideo: ImageButton
 
     private lateinit var rootLayout: FrameLayout
@@ -70,77 +78,91 @@ class CameraActivity : AppCompatActivity() {
 
         filePath = ""
 
-        // Create a root layout
+        // Calculate bottom bar height (about 18% of screen height)
+        val displayMetrics = resources.displayMetrics
+        val bottomBarHeight = (displayMetrics.heightPixels * 0.18).toInt()
+
+        // Root layout
         rootLayout = FrameLayout(this).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
+            layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+            setBackgroundColor(Color.BLACK)
         }
 
-        // Add PreviewView
+        // Camera preview area (above bottom bar)
         previewView = PreviewView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
+                MATCH_PARENT,
+                displayMetrics.heightPixels - bottomBarHeight
+            ).apply {
+                gravity = Gravity.TOP
+            }
         }
         rootLayout.addView(previewView)
 
-        // Add Take Picture Button
-        btnTakePicture = ImageButton(this).apply {
-            setImageResource(android.R.drawable.ic_menu_camera)
+        // Bottom bar (white, fixed height)
+        val bottomBar = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
+                MATCH_PARENT,
+                bottomBarHeight
             ).apply {
-                gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-                bottomMargin = 50
+                gravity = Gravity.BOTTOM
             }
+            setBackgroundColor(Color.WHITE)
         }
-        rootLayout.addView(btnTakePicture)
 
-        // Add Record Video Button
-        btnRecordVideo = ImageButton(this).apply {
-            setImageResource(android.R.drawable.presence_video_online)
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                gravity = Gravity.BOTTOM or Gravity.END
-                bottomMargin = 50
-                marginEnd = 50
-            }
-        }
-        rootLayout.addView(btnRecordVideo)
-
-        // Add Switch Camera Button
+        // Switch camera button (left)
         btnSwitchCamera = ImageButton(this).apply {
-            setImageResource(android.R.drawable.ic_menu_revert)
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                gravity = Gravity.TOP or Gravity.END
-                topMargin = 50
-                marginEnd = 50
+            layoutParams = FrameLayout.LayoutParams(100, 100).apply {
+                gravity = Gravity.CENTER_VERTICAL or Gravity.START
+                marginStart = 48
             }
+            setImageResource(android.R.drawable.ic_menu_camera) // Replace with a better icon if available
+            setColorFilter(Color.parseColor("#2196F3"))
+            background = null
         }
-        rootLayout.addView(btnSwitchCamera)
+        bottomBar.addView(btnSwitchCamera)
 
-        // Add Flash Button
-        btnFlash = ImageButton(this).apply {
-            setImageResource(android.R.drawable.ic_menu_manage)
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                gravity = Gravity.TOP or Gravity.START
-                topMargin = 50
-                marginStart = 50
+        // Modern capture button (center)
+        btnTakePicture = ImageButton(this).apply {
+            layoutParams = FrameLayout.LayoutParams(140, 140).apply {
+                gravity = Gravity.CENTER
             }
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.parseColor("#4EE3E6")) // Light teal
+            }
+            setImageResource(0)
         }
-        rootLayout.addView(btnFlash)
+        bottomBar.addView(btnTakePicture)
+
+        // Modern record video button (center, hidden by default unless in video mode)
+        btnRecordVideo = ImageButton(this).apply {
+            layoutParams = FrameLayout.LayoutParams(140, 140).apply {
+                gravity = Gravity.CENTER
+            }
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.GREEN)
+            }
+            setImageResource(0)
+            visibility = View.GONE // Only show in video mode
+        }
+        bottomBar.addView(btnRecordVideo)
+
+        // Leave camera button (right, optional)
+        btnLeaveCam = ImageButton(this).apply {
+            layoutParams = FrameLayout.LayoutParams(100, 100).apply {
+                gravity = Gravity.CENTER_VERTICAL or Gravity.END
+                marginEnd = 48
+            }
+            setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+            setColorFilter(Color.parseColor("#2196F3"))
+            background = null
+        }
+        bottomBar.addView(btnLeaveCam)
+
+        // Add bottom bar to root layout
+        rootLayout.addView(bottomBar)
 
         // Set the root layout as the content view
         setContentView(rootLayout)
@@ -159,7 +181,7 @@ class CameraActivity : AppCompatActivity() {
         // Set button listeners
         btnTakePicture.setOnClickListener { takePicture() }
         btnSwitchCamera.setOnClickListener { toggleCamera() }
-        btnFlash.setOnClickListener { toggleFlash() }
+        btnLeaveCam.setOnClickListener { finishActivity() }
         btnRecordVideo.setOnClickListener { toggleRecording() }
     }
 
@@ -210,7 +232,7 @@ class CameraActivity : AppCompatActivity() {
     private fun bindPreview(cameraProvider: ProcessCameraProvider, cameraDirection: Int) {
         val executor = ContextCompat.getMainExecutor(this)
 
-       try {
+        try {
             val preview = Preview.Builder()
                 .build()
                 .also {
@@ -245,12 +267,25 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun showPreview(file: File, isVideo: Boolean) {
-        // Create a new layout for the preview
+        // Preview layout: 90% of screen, white background, rounded corners
         val previewLayout = FrameLayout(this).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
+            layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+            setBackgroundColor(Color.parseColor("#CCFFFFFF"))
+        }
+
+        // Calculate bottom bar height (about 10% of screen height)
+        val displayMetrics = resources.displayMetrics
+        val bottomBarHeight = (displayMetrics.heightPixels * 0.10).toInt()
+
+        val previewContainer = FrameLayout(this).apply {
+            val size = (displayMetrics.heightPixels * 0.9).toInt()
+            layoutParams = FrameLayout.LayoutParams(size, size, Gravity.TOP or Gravity.CENTER_HORIZONTAL)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setColor(Color.WHITE)
+                cornerRadius = 48f
+            }
+            elevation = 16f
         }
 
         // Add an ImageView or VideoView for the preview
@@ -258,67 +293,108 @@ class CameraActivity : AppCompatActivity() {
             val videoView = VideoView(this).apply {
                 setVideoURI(Uri.fromFile(file))
                 layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT
+                    MATCH_PARENT,
+                    MATCH_PARENT,
+                    Gravity.CENTER
                 )
-                start()
+                // Attach native controls
+                val mediaController = MediaController(this@CameraActivity).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        MATCH_PARENT,
+                        MATCH_PARENT,
+                        Gravity.CENTER
+                    ).apply {
+                        // position the media controller right above bottom bar
+                        val isPortrait = resources.configuration.orientation == 1
+                        if (isPortrait) {
+                            bottomMargin = bottomBarHeight + (measuredHeight / 2).toInt()
+                        }
+                    }
+                }
+                mediaController.setAnchorView(this)
+                setMediaController(mediaController)
             }
-            previewLayout.addView(videoView)
+            previewContainer.addView(videoView)
+            // Start video as soon as possible and again after layout
+            videoView.setOnPreparedListener { mp ->
+                mp.isLooping = true
+                videoView.start()
+            }
+            videoView.requestFocus()
+            previewContainer.post {
+                videoView.start()
+            }
         } else {
             val imageView = ImageView(this).apply {
                 setImageURI(Uri.fromFile(file))
-                layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT
-                )
+                layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
                 scaleType = ImageView.ScaleType.FIT_CENTER
+                setBackgroundColor(Color.WHITE)
             }
-            previewLayout.addView(imageView)
+            previewContainer.addView(imageView)
+        }
+        previewLayout.addView(previewContainer)
+
+        // Bottom bar (white, fixed height, overlays preview)
+        val bottomBar = FrameLayout(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                MATCH_PARENT,
+                bottomBarHeight
+            ).apply {
+                gravity = Gravity.BOTTOM
+            }
+            setBackgroundColor(Color.WHITE)
+            elevation = 32f
         }
 
-        // Add Accept Button
+        // Save Button (left)
         val btnAccept = ImageButton(this).apply {
-            setImageResource(android.R.drawable.ic_menu_save)
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                gravity = Gravity.BOTTOM or Gravity.END
-                bottomMargin = 50
-                marginEnd = 50
+            layoutParams = FrameLayout.LayoutParams(120, 120).apply {
+                gravity = Gravity.CENTER_VERTICAL or Gravity.START
+                marginStart = 80
             }
+            setImageResource(android.R.drawable.checkbox_on_background)
+            setColorFilter(Color.parseColor("#2196F3"))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.WHITE)
+                setStroke(4, Color.parseColor("#2196F3"))
+            }
+            visibility = View.VISIBLE
+            alpha = 1.0f
             setOnClickListener {
-                Log.w("=======================", "Accept button clicked")
                 val intent = Intent().putExtra(if (isVideo) "videoPath" else "imagePath", file.absolutePath)
                 filePath = file.absolutePath
-                Log.w("=======================", "Activity.setResult called with OK result")
                 finishActivity(intent)
             }
         }
-        previewLayout.addView(btnAccept)
+        bottomBar.addView(btnAccept)
 
-        // Add Cancel Button
+        // Cancel Button (right)
         val btnCancel = ImageButton(this).apply {
-            setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                gravity = Gravity.BOTTOM or Gravity.START
-                bottomMargin = 50
-                marginStart = 50
+            layoutParams = FrameLayout.LayoutParams(120, 120).apply {
+                gravity = Gravity.CENTER_VERTICAL or Gravity.END
+                marginEnd = 80
             }
+            setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+            setColorFilter(Color.RED)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.WHITE)
+                setStroke(4, Color.RED)
+            }
+            visibility = View.VISIBLE
+            alpha = 1.0f
             setOnClickListener {
-                Log.w("=======================", "Cancel button clicked")
                 file.delete()
-                setContentView(rootLayout) // Return to the camera view
-                setupCamera() // Reinitialize the camera
-                Log.w("=======================", "Activity.setResult called with OK result")
+                setContentView(rootLayout)
+                setupCamera()
             }
         }
-        previewLayout.addView(btnCancel)
+        bottomBar.addView(btnCancel)
 
-        // Set the preview layout as the content view
+        previewLayout.addView(bottomBar)
+
         setContentView(previewLayout)
     }
 
@@ -353,15 +429,13 @@ class CameraActivity : AppCompatActivity() {
         setupCamera()
     }
 
-    private fun toggleFlash() {
-        // Implement flash toggle logic
-    }
-
     @RequiresPermission(allOf = [Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO])
     private fun toggleRecording() {
         if (recording != null) {
             recording?.stop()
             recording = null
+            // Set button color to green (idle)
+            (btnRecordVideo.background as? GradientDrawable)?.setColor(Color.GREEN)
         } else {
             val videoFile = File(
                 cacheDir,
@@ -377,11 +451,15 @@ class CameraActivity : AppCompatActivity() {
                     when (event) {
                         is VideoRecordEvent.Start -> {
                             Toast.makeText(this, "Recording started", Toast.LENGTH_SHORT).show()
+                            // Set button color to red (recording)
+                            (btnRecordVideo.background as? GradientDrawable)?.setColor(Color.RED)
                         }
                         is VideoRecordEvent.Finalize -> {
                             Toast.makeText(this, "Recording stopped", Toast.LENGTH_SHORT).show()
+                            // Set button color to green (idle)
+                            (btnRecordVideo.background as? GradientDrawable)?.setColor(Color.GREEN)
                             if (!event.hasError()) {
-                                showPreview(videoFile, isVideo = true) // Show preview after recording
+                                showPreview(videoFile, isVideo = true)
                             } else {
                                 Toast.makeText(this, "Recording failed", Toast.LENGTH_SHORT).show()
                             }

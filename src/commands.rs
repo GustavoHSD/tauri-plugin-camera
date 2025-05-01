@@ -35,10 +35,10 @@ pub struct RecordVideoResult {
     pub response: RecordVideoResponse,
 }
 
-// #[command]
-// pub async fn record_video(app_handle: tauri::AppHandle,  args: RecordVideoArgs) -> Result<RecordVideoResult, String> {
-//     //let camera = state.camera();
-//     let camera = app_handle.camera();
-//     let response = camera.record_video(args.request).map_err(|e| e.to_string())?;
-//     Ok(RecordVideoResult { response })
-// }
+#[command]
+pub async fn record_video(app_handle: tauri::AppHandle,  args: RecordVideoArgs) -> Result<RecordVideoResult, String> {
+    //let camera = state.camera();
+    let camera = app_handle.camera();
+    let response = camera.record_video(args.request).map_err(|e| e.to_string())?;
+    Ok(RecordVideoResult { response })
+}

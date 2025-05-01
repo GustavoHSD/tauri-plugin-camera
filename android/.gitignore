@@ -1,2 +1,6 @@
 /build
 /.tauri
+/.gradle
+/.idea
+/.tauri
+/gradle/*
