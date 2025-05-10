@@ -20,18 +20,17 @@
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "prepublishOnly": "pnpm build",
-    "pretest": "pnpm build",
-    "tauri": "ng"
+    "tauri": "tauri"
   },
   "dependencies": {
-    "@tauri-apps/api": ">=2.0.0-beta.6"
+    "@tauri-apps/api": "^2.5.0",
+    "@tauri-apps/cli": "^2.5.0"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^11.1.6",
     "rollup": "^4.9.6",
-    "typescript": "^5.3.3",
     "tslib": "^2.6.2",
+    "typescript": "^5.3.3",
     "vite": "^4.0.0"
   }
 }

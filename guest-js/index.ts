@@ -1,4 +1,3 @@
-// filepath: e:\Users\charles\Documents\Projects\Typescript\tauri-plugin-camera\guest-js\index.ts
 import { invoke } from '@tauri-apps/api/core';
 
 
