@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Camera Example App</string>
+    <string name="main_activity_title">Camera Example App</string>
+</resources>

@@ -1,0 +1,13 @@
+{
+  "identifier": "default",
+  "description": "enables the default permissions including camera access",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "camera:default",
+    "camera:allow-take-picture",
+    "camera:allow-record-video"
+  ]
+}

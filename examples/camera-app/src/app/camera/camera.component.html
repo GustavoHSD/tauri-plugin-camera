@@ -1,0 +1,26 @@
+<div>
+  <button (click)="takePicture()">Take Picture</button>
+  <button (click)="recordVideo()">Record Video</button>
+</div>
+@if (takenPicture()) {
+<div class="preview">
+  <h3>Captured Image:</h3>
+  <img [src]="'data:image/jpeg;base64, ' + takenPicture()?.imageData" alt="Captured Image" />
+  <p>Size: {{takenPicture()?.width}} x {{takenPicture()?.height}}</p>
+</div>
+}
+@if (takenVideo()) {
+<div class="preview">
+  <h3>Recorded Video:</h3>
+  <video controls>
+    <source type="video/mp4" [src]="'data:video/mp4;base64, ' + takenVideo()?.videoData" />
+  </video>
+  <p>Size: {{takenVideo()?.width}} x {{takenVideo()?.height}}</p>
+</div>
+}
+
+@if (emptyReturn) {
+  <p>
+    No image or video captured.
+  </p>
+}
