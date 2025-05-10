@@ -1,6 +1,6 @@
 {
-  "name": "camera-example-app",
-  "version": "1.0.0",
+  "name": "tauri-plugin-camera",
+  "version": "0.1.0",
   "author": "Charles Schaefer",
   "description": "A Tauri plugin for accessing the camera on Android devices.",
   "type": "module",
@@ -25,11 +25,9 @@
     "tauri": "ng"
   },
   "dependencies": {
-    "svelte": "^3.0.0",
     "@tauri-apps/api": ">=2.0.0-beta.6"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^1.0.0",
     "@rollup/plugin-typescript": "^11.1.6",
     "rollup": "^4.9.6",
     "typescript": "^5.3.3",
