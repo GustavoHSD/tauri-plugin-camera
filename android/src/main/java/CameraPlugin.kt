@@ -31,6 +31,8 @@ class CameraPlugin(private val activity: Activity) : Plugin(activity) {
 
     @Command
     fun takePicture(invoke: Invoke) {
+        Log.w("CameraPlugin", "takePicture called")
+
         val intent = Intent(activity, CameraActivity::class.java).apply {
             putExtra("mode", "takePicture") // Add mode for taking a picture
         }

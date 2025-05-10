@@ -177,12 +177,6 @@
       "description": "Permission identifier",
       "oneOf": [
         {
-          "description": "Enables the ping command without any pre-configured scope.",
-          "type": "string",
-          "const": "camera:allow-ping",
-          "markdownDescription": "Enables the ping command without any pre-configured scope."
-        },
-        {
           "description": "Enables the record_video command without any pre-configured scope.",
           "type": "string",
           "const": "camera:allow-record-video",
@@ -193,12 +187,6 @@
           "type": "string",
           "const": "camera:allow-take-picture",
           "markdownDescription": "Enables the take_picture command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the ping command without any pre-configured scope.",
-          "type": "string",
-          "const": "camera:deny-ping",
-          "markdownDescription": "Denies the ping command without any pre-configured scope."
         },
         {
           "description": "Denies the record_video command without any pre-configured scope.",

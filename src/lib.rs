@@ -13,7 +13,7 @@ pub use error::{ Error, Result };
 const PLUGIN_IDENTIFIER: &str = "app.tauri.camera";
 
 #[cfg(mobile)]
-use mobile::Camera;
+pub use mobile::Camera;
 
 /// Extensions to [`tauri::App`], [`tauri::AppHandle`] and [`tauri::Window`] to access the camera APIs.
 pub trait CameraExt<R: Runtime> {

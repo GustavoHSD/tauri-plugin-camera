@@ -30,7 +30,7 @@ export class CameraComponent {
         console.log("Taking Video...");
         try {
             this.takenVideo.set(null);
-            const response = await invoke("plugin:camera|record_video");
+            const response = await invoke<TakeVideoResponse>("plugin:camera|record_video");
             console.log("Video taken from Câmera:", response);
             emit("videoRecorded", { url: response });
             this.takenVideo.set(response as TakeVideoResponse);
@@ -44,7 +44,20 @@ export class CameraComponent {
         console.log("Taking picture...");
         try {
             this.takenPicture.set(null);
-            const response = await invoke("plugin:camera|take_picture");
+            const response = await invoke<TakePictureResponse>("plugin:camera|take_picture");
+            console.log("Picture taken from Câmera:", response);
+            emit("pictureTaken", { url: response });
+            this.takenPicture.set(response as TakePictureResponse);
+        } catch (error) {
+            console.error("Error taking picture:", error);
+            this.emptyReturn = true;
+        }
+    }
+
+    async takePictureRust() {
+        try {
+            this.takenPicture.set(null);
+            const response = await invoke("take_picture");
             console.log("Picture taken from Câmera:", response);
             emit("pictureTaken", { url: response });
             this.takenPicture.set(response as TakePictureResponse);

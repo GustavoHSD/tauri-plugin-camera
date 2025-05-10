@@ -8,49 +8,73 @@ This project is a Tauri plugin that allows Tauri applications to access the Andr
 - Expose Rust APIs that act as a proxy to the Kotlin camera implementation.
 - Provide TypeScript APIs for easy interaction within Tauri applications.
 
+## Examples
+
+See an example in the folder `examples/camera-app`.
+
 ## Project Structure
 
 - **android/src**: Contains the Android-specific implementation of the camera plugin.
-  - **androidTest/java**: Instrumented tests for the camera plugin.
   - **main/java**: Contains the main classes for the camera plugin.
     - `CameraPlugin.kt`: Entry point for the Tauri plugin on Android.
     - `CameraHandler.kt`: Manages camera operations and file references.
-  - **test/java**: Unit tests for the camera plugin.
 
 - **guest-js/index.ts**: TypeScript APIs for interacting with the camera plugin.
 
-- **src**: Contains the Rust implementation of the Tauri plugin.
-  - `commands.rs`: Defines commands exposed to the consumer app.
-  - `desktop.rs`: Desktop-specific implementations.
-  - `error.rs`: Error handling for the plugin.
-  - `lib.rs`: Main entry point for the Rust code.
-  - `mobile.rs`: Mobile-specific implementations.
-  - `models.rs`: Data models used in the plugin.
-
-- **package.json**: Configuration file for npm, listing dependencies and build scripts.
-
-- **Cargo.toml**: Configuration file for Rust's package manager, Cargo.
-
-- **build.rs**: Build script that configures the Tauri plugin.
 
 ## Installation
 
-To install the plugin, add it to your Tauri project as a dependency in your `Cargo.toml` and `package.json` files.
+Install it adding both the cargo and the javascript versions as dependencies:
+
+```bash
+cargo add tauri-plugin-camera
+npm i --save tauri-plugin-camera
+```
+
+After that, initialize the plugin on your tauri's run() function (usually lib.rs or main.rs):
+
+```rust
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        // add the following line:
+        .plugin(tauri_plugin_camera::init())
+
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+```
+
 
 ## Usage
 
 ### TypeScript API
 
-Import the camera plugin in your TypeScript code and use the provided functions to interact with the camera.
+```typescript
+import { takePicture, recordVideo } from "tauri-plugin-camera";
+
+takePicture().then(pictureResponse => {
+  // imageData is the base64 encoded image 
+  const {imageData, width, height} = pictureResponse;
+});
+
+recordVideo().then(videoResponse => {
+  // videoData is the base64 encoded video
+  const {videoData, width, height} = videoResponse;
+})
+```
 
 ### Rust API
 
-Use the exposed commands in your Rust code to manage camera operations.
+```rust
+use tauri_plugin_camera::{CameraExt, TakePictureResponse};
 
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request for any improvements or bug fixes.
-
-## License
-
-This project is licensed under the MIT License. See the LICENSE file for details.
+#[tauri::command]
+fn take_picture(app: AppHandle) -> TakePictureResponse {
+    // Call the camera plugin to take a picture
+    let response = app.camera().take_picture().unwrap();
+    dbg!("Response: {:?}", &response);
+    // response.imageData is the base64 encoded image
+    response
+}
+```

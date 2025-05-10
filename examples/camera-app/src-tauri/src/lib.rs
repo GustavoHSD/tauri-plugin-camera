@@ -1,9 +1,14 @@
-// filepath: camera-example-app/camera-example-app/src-tauri/src/lib.rs
+use tauri::AppHandle;
+use tauri_plugin_camera::{CameraExt, TakePictureResponse};
+
 #[tauri::command]
-fn take_picture() -> String {
-    // Logic to take a picture using the camera plugin
-    // This function will interact with the camera plugin to capture an image
-    "Picture taken successfully".to_string()
+fn take_picture(app: AppHandle) -> TakePictureResponse {
+    let camera = app.camera();
+    
+    // Call the camera plugin to take a picture
+    let response = camera.take_picture().unwrap();
+    dbg!("Response: {:?}", &response);
+    response
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
