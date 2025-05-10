@@ -1,17 +1,22 @@
 package app.tauri.camera
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
-import android.util.Size
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -35,25 +40,31 @@ import androidx.camera.video.VideoCapture
 import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.toColorInt
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+const val MIN_BUTTON_BAR_HEIGHT = 280
+const val MARGIN_BOTTOM_CAMERA_BUTTONS = -20
+
 class CameraActivity : AppCompatActivity() {
 
     // Make UI components open for testing/mocking
-    internal open lateinit var previewView: PreviewView
-    internal open lateinit var btnTakePicture: ImageButton
-    internal open lateinit var btnSwitchCamera: ImageButton
-    internal open lateinit var btnLeaveCam: ImageButton
-    internal open lateinit var btnRecordVideo: ImageButton
+    internal lateinit var previewView: PreviewView
+    internal lateinit var btnTakePicture: ImageButton
+    internal lateinit var btnSwitchCamera: ImageButton
+    internal lateinit var btnLeaveCam: ImageButton
+    internal lateinit var btnRecordVideo: ImageButton
 
-    internal open lateinit var rootLayout: FrameLayout
+    internal lateinit var rootLayout: FrameLayout
 
     private var lensFacing = CameraSelector.DEFAULT_BACK_CAMERA
     private var imageCapture: ImageCapture? = null
     private var videoCapture: VideoCapture<Recorder>? = null
     private var recording: Recording? = null
+    private var screenWidth: Int? = null
+    private var screenHeight: Int? = null
 
     var filePath = ""
     //var intent: Intent? = null
@@ -81,30 +92,33 @@ class CameraActivity : AppCompatActivity() {
 
     // Expose bottom bar height calculation for testing
     internal fun calculateBottomBarHeight(): Int {
-        val displayMetrics = resources.displayMetrics
-        return (displayMetrics.heightPixels * 0.18).toInt()
+        return (screenHeight!! * 0.15).toInt().coerceAtLeast(MIN_BUTTON_BAR_HEIGHT)
     }
 
-    override public fun onCreate(savedInstanceState: Bundle?) {
+    public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        hideSystemUI()
 
         filePath = ""
 
         // Calculate bottom bar height (about 18% of screen height)
-        val displayMetrics = resources.displayMetrics
         val bottomBarHeight = calculateBottomBarHeight()
 
         // Root layout
         rootLayout = FrameLayout(this).apply {
-            layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
+            layoutParams = FrameLayout.LayoutParams(
+                screenWidth!!,
+                screenHeight!!,
+                Gravity.TOP
+            )
             setBackgroundColor(Color.BLACK)
         }
 
         // Camera preview area (above bottom bar)
         previewView = PreviewView(this).apply {
             layoutParams = FrameLayout.LayoutParams(
-                MATCH_PARENT,
-                displayMetrics.heightPixels - bottomBarHeight
+                screenWidth!!,
+                (screenHeight!! - bottomBarHeight).toInt()
             ).apply {
                 gravity = Gravity.TOP
             }
@@ -118,18 +132,20 @@ class CameraActivity : AppCompatActivity() {
                 bottomBarHeight
             ).apply {
                 gravity = Gravity.BOTTOM
+                bottomMargin = 0
             }
-            setBackgroundColor(Color.WHITE)
+            setBackgroundColor("#CCFFFFFF".toColorInt())
         }
 
         // Switch camera button (left)
         btnSwitchCamera = ImageButton(this).apply {
             layoutParams = FrameLayout.LayoutParams(100, 100).apply {
                 gravity = Gravity.CENTER_VERTICAL or Gravity.START
+                topMargin = MARGIN_BOTTOM_CAMERA_BUTTONS
                 marginStart = 48
             }
-            setImageResource(android.R.drawable.ic_menu_camera) // Replace with a better icon if available
-            setColorFilter(Color.parseColor("#2196F3"))
+            setImageResource(android.R.drawable.ic_menu_revert) // Replace with a better icon if available
+            setColorFilter("#2196F3".toColorInt())
             background = null
         }
         bottomBar.addView(btnSwitchCamera)
@@ -138,10 +154,11 @@ class CameraActivity : AppCompatActivity() {
         btnTakePicture = ImageButton(this).apply {
             layoutParams = FrameLayout.LayoutParams(140, 140).apply {
                 gravity = Gravity.CENTER
+                topMargin = MARGIN_BOTTOM_CAMERA_BUTTONS
             }
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#4EE3E6")) // Light teal
+                setColor("#4EE3E6".toColorInt()) // Light teal
             }
             setImageResource(0)
         }
@@ -151,6 +168,7 @@ class CameraActivity : AppCompatActivity() {
         btnRecordVideo = ImageButton(this).apply {
             layoutParams = FrameLayout.LayoutParams(140, 140).apply {
                 gravity = Gravity.CENTER
+                topMargin = MARGIN_BOTTOM_CAMERA_BUTTONS
             }
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
@@ -166,9 +184,10 @@ class CameraActivity : AppCompatActivity() {
             layoutParams = FrameLayout.LayoutParams(100, 100).apply {
                 gravity = Gravity.CENTER_VERTICAL or Gravity.END
                 marginEnd = 48
+                topMargin = MARGIN_BOTTOM_CAMERA_BUTTONS
             }
             setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
-            setColorFilter(Color.parseColor("#2196F3"))
+            setColorFilter("#2196F3".toColorInt())
             background = null
         }
         bottomBar.addView(btnLeaveCam)
@@ -198,6 +217,11 @@ class CameraActivity : AppCompatActivity() {
         btnRecordVideo.setOnClickListener { toggleRecording() }
     }
 
+    public override fun onResume() {
+        super.onResume()
+        hideSystemUI()
+    }
+
     @JvmOverloads
     fun finishActivity(intent: Intent? = Intent()) {
         if (filePath.isNotEmpty()) {
@@ -207,6 +231,36 @@ class CameraActivity : AppCompatActivity() {
         }
         finish()
     }
+
+    private fun hideSystemUI() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+            window.decorView.windowInsetsController?.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
+            window.decorView.windowInsetsController?.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                or View.SYSTEM_UI_FLAG_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)
+        }
+        val w = baseContext.resources.displayMetrics.widthPixels
+        val h = baseContext.resources.displayMetrics.heightPixels
+        val displayMetrics = resources.displayMetrics
+        screenWidth = displayMetrics.widthPixels
+        screenHeight = (displayMetrics.heightPixels * 1.06).toInt()
+
+        Log.w("CameraActivity", "||")
+        Log.w("CameraActivity", "w: $w")
+        Log.w("CameraActivity", "h: $h")
+        Log.w("CameraActivity", "w: $screenWidth")
+        Log.w("CameraActivity", "h: $screenHeight")
+        Log.w("CameraActivity", "||")
+
+    }
+
 
     private fun configureUIForMode(mode: String?) {
         when (mode) {
@@ -243,8 +297,7 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun bindPreview(cameraProvider: ProcessCameraProvider, cameraDirection: Int) {
-        val executor = ContextCompat.getMainExecutor(this)
-
+        //val executor = ContextCompat.getMainExecutor(this)
         try {
             val preview = Preview.Builder()
                 .build()
@@ -253,7 +306,9 @@ class CameraActivity : AppCompatActivity() {
                 }
 
             imageCapture = ImageCapture.Builder()
-                .setTargetResolution(Size(1280, 720))
+                .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+                //.setTargetResolution(Size(1280, 720))
+                //.setTargetResolution(Size(screenWidth, displayMetrics.heightPixels))
                 .build()
 
             val recorder = Recorder.Builder()
@@ -279,20 +334,37 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("RestrictedApi")
     private fun showPreview(file: File, isVideo: Boolean) {
+
         // Preview layout: 90% of screen, white background, rounded corners
         val previewLayout = FrameLayout(this).apply {
-            layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)
-            setBackgroundColor(Color.parseColor("#CCFFFFFF"))
+            layoutParams = FrameLayout.LayoutParams(
+                screenWidth!!,
+                screenHeight!!,
+                Gravity.TOP
+            )
+            setBackgroundColor("#CCFFFFFF".toColorInt())
         }
 
         // Calculate bottom bar height (about 10% of screen height)
-        val displayMetrics = resources.displayMetrics
-        val bottomBarHeight = (displayMetrics.heightPixels * 0.10).toInt()
+        val bottomBarHeight = calculateBottomBarHeight()
+
+        Log.w("CameraActivity", "|")
+        Log.w("CameraActivity", "bottomBarHeight")
+        Log.w("CameraActivity", bottomBarHeight.toString())
+        Log.w("CameraActivity", "heightPixels")
+        Log.w("CameraActivity", screenHeight.toString())
+        Log.w("CameraActivity", "widthPixels")
+        Log.w("CameraActivity", screenWidth.toString())
+        Log.w("CameraActivity", "|")
 
         val previewContainer = FrameLayout(this).apply {
-            val size = (displayMetrics.heightPixels * 0.9).toInt()
-            layoutParams = FrameLayout.LayoutParams(size, size, Gravity.TOP or Gravity.CENTER_HORIZONTAL)
+            layoutParams = FrameLayout.LayoutParams(
+                screenWidth!!,
+                (screenHeight!! - bottomBarHeight).toInt() + 15, // some space to hide the radius border
+                Gravity.TOP
+            )
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 setColor(Color.WHITE)
@@ -301,6 +373,10 @@ class CameraActivity : AppCompatActivity() {
             elevation = 16f
         }
 
+        var width = 0
+        var height = 0
+        var rotation = 0
+
         // Add an ImageView or VideoView for the preview
         if (isVideo) {
             val videoView = VideoView(this).apply {
@@ -308,7 +384,7 @@ class CameraActivity : AppCompatActivity() {
                 layoutParams = FrameLayout.LayoutParams(
                     MATCH_PARENT,
                     MATCH_PARENT,
-                    Gravity.CENTER
+                    Gravity.CENTER_HORIZONTAL and Gravity.TOP
                 )
                 // Attach native controls
                 val mediaController = MediaController(this@CameraActivity).apply {
@@ -320,7 +396,7 @@ class CameraActivity : AppCompatActivity() {
                         // position the media controller right above bottom bar
                         val isPortrait = resources.configuration.orientation == 1
                         if (isPortrait) {
-                            bottomMargin = bottomBarHeight + (measuredHeight / 2).toInt()
+                            bottomMargin = bottomBarHeight + (measuredHeight / 2).toInt() - 50
                         }
                     }
                 }
@@ -337,6 +413,13 @@ class CameraActivity : AppCompatActivity() {
             previewContainer.post {
                 videoView.start()
             }
+
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(file.absolutePath)
+
+            rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)!!.toInt()
+            width = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)!!.toInt()
+            height = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)!!.toInt()
         } else {
             val imageView = ImageView(this).apply {
                 setImageURI(Uri.fromFile(file))
@@ -345,13 +428,19 @@ class CameraActivity : AppCompatActivity() {
                 setBackgroundColor(Color.WHITE)
             }
             previewContainer.addView(imageView)
+
+            width = imageCapture?.resolutionInfo?.resolution!!.width
+            height = imageCapture?.resolutionInfo?.resolution!!.height
+            rotation = imageCapture?.resolutionInfo!!.rotationDegrees
         }
         previewLayout.addView(previewContainer)
 
+        Log.w("CameraActivity", "width: $width")
+        Log.w("CameraActivity", "height: $height")
         // Bottom bar (white, fixed height, overlays preview)
         val bottomBar = FrameLayout(this).apply {
             layoutParams = FrameLayout.LayoutParams(
-                MATCH_PARENT,
+                screenWidth!!,
                 bottomBarHeight
             ).apply {
                 gravity = Gravity.BOTTOM
@@ -366,17 +455,28 @@ class CameraActivity : AppCompatActivity() {
                 gravity = Gravity.CENTER_VERTICAL or Gravity.START
                 marginStart = 80
             }
-            setImageResource(android.R.drawable.checkbox_on_background)
-            setColorFilter(Color.parseColor("#2196F3"))
+            setImageResource(android.R.drawable.ic_menu_save)
+            setColorFilter("#2196F3".toColorInt())
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 setColor(Color.WHITE)
-                setStroke(4, Color.parseColor("#2196F3"))
+                setStroke(4, "#2196F3".toColorInt())
             }
             visibility = View.VISIBLE
             alpha = 1.0f
             setOnClickListener {
                 val intent = Intent().putExtra(if (isVideo) "videoPath" else "imagePath", file.absolutePath)
+
+                // attributes width and height based on the media rotation
+                if (rotation == 0 || rotation == 180) {
+                    intent.putExtra("width", width)
+                    intent.putExtra("height", height)
+                } else {
+                    intent.putExtra("width", height)
+                    intent.putExtra("height", width)
+                }
+
+
                 filePath = file.absolutePath
                 finishActivity(intent)
             }
