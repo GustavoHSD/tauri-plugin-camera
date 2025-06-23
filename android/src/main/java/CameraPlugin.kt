@@ -8,12 +8,14 @@ import android.webkit.WebView
 import androidx.activity.result.ActivityResult
 import app.tauri.annotation.ActivityCallback
 import app.tauri.annotation.Command
+import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Invoke
 import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
 import java.io.File
 import java.io.FileInputStream
 
+@TauriPlugin
 class CameraPlugin(private val activity: Activity) : Plugin(activity) {
     private lateinit var webView: WebView
 
