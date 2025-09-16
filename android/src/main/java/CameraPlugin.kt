@@ -58,7 +58,7 @@ class CameraPlugin(private val activity: Activity) : Plugin(activity) {
                     val height = result.data?.getIntExtra("height", -1)
 
                     val returnObj = JSObject()
-                    returnObj.put("imageData", bytes)
+                    returnObj.put("imageData", bytes.toString())
                     returnObj.put("width", width)
                     returnObj.put("height", height)
 
