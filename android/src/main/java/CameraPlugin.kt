@@ -52,17 +52,17 @@ class CameraPlugin(private val activity: Activity) : Plugin(activity) {
                 try {
                     val file = File(imagePath)
                     val bytes = FileInputStream(file).use { it.readBytes() }
-                    val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                    //val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
 
                     val width = result.data?.getIntExtra("width", -1)
                     val height = result.data?.getIntExtra("height", -1)
 
                     val returnObj = JSObject()
-                    returnObj.put("imageData", base64)
+                    returnObj.put("imageData", bytes)
                     returnObj.put("width", width)
                     returnObj.put("height", height)
 
-                    Log.w("CameraPlugin", "Returning imageData as base64, length: ${base64.length}")
+                    Log.w("CameraPlugin", "Returning imageData as base64, length: ${bytes.size}")
                     Log.w("CameraPlugin", "Width: ${width}")
                     Log.w("CameraPlugin", "Height: ${height}")
                     invoke.resolve(returnObj)
